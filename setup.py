@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
-# tests_require = open(os.path.join(here, 'requirements-test.txt')).read()
+requires = open(os.path.join(here, 'requirements.txt')).read().split()
 
 setup(
     name='sphinxsearch',
@@ -15,7 +15,8 @@ setup(
     test_suite='sphinxsearch.tests',
     url='https://bitbucket.org/insanemainframe/sphinxsearch',
     license='GPL',
-    # tests_require=tests_require,
+    requires=requires,
+    tests_require=tests_require,
     description='High-level sphinxsearch library',
     long_description=README + '\n\n' + CHANGES,
 )
