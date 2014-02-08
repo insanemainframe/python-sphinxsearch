@@ -69,10 +69,11 @@ class Test(unittest.TestCase):
     def test_pgsql(self):
         pass
 
+
 class RealTest(unittest.TestCase):
     def save_engine(self, engine):
         import tempfile
         from os.path import join
         tmp = tempfile.gettempdir()
-        config_path = join(tmp 'sphinx.conf')
-        engine.save()
+        config_path = join(tmp, 'sphinx.conf')
+        engine.save(config_path)
