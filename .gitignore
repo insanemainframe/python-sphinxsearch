@@ -1,0 +1,11 @@
+.coverage
+.tox
+cover
+sphinx.conf
+
+syntax: glob
+
+htmlcov/*
+build/*
+sphinxsearch.egg-info/*
+*.pyc
