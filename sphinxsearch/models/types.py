@@ -54,8 +54,32 @@ class AbstractSourceType(AbstractIndexType):
     def get_source_options(self):
         """"""
 
+class ODBC(AbstractSourceType):
+    source_type = SQL_SOURCE_TYPE
 
-class DB(AbstractSourceType):
+    def __init__(self, dsn):
+        self.dsn = dsn
+
+    def get_source_options(self):
+        return {'%s_dsn' % self.source_type: self.dsn}
+
+
+class XML(AbstractSourceType):
+    source_type = XML_SOURCE_TYPE
+
+    def __init__(self, command, fixup_utf8=None):
+        self.command = command
+        self.fixup_utf8 = fixup_utf8
+
+    def get_source_options(self):
+        source_options = {}
+        source_options['%s_command' % self.source_type] = self.command
+        if self.fixup_utf8 is not None:
+            source_options['xmlpipe_fixup_utf8'] = int(bool(self.fixup_utf8))
+        return source_options
+
+
+class BaseDB(AbstractSourceType):
     source_type = SQL_SOURCE_TYPE
 
     def __init__(self, type=None, host=None, port=None,
@@ -85,21 +109,48 @@ class DB(AbstractSourceType):
         return source_options
 
 
-class ODBC(AbstractSourceType):
-    source_type = SQL_SOURCE_TYPE
+class MysqlCertificate(object):
+    def __init__(self, cert, key, ca):
+        self.cert = cert
+        self.key = key
+        self.ca = ca
 
-    def __init__(self, dsn):
-        self.dsn = dsn
+    def get_options(self):
+        source_options = {}
+        source_options['mysql_ssl_cert'] = self.cert
+        source_options['mysql_ssl_key'] = self.key
+        source_options['mysql_ssl_ca'] = self.ca
+        return source_options
+
+
+class MysqlSource(BaseDB):
+    def __init__(self, *args, **kwargs):
+        self.certificate = kwargs.get('certificate')
+        super(MysqlSource, self).__init__(*args, **kwargs)
 
     def get_source_options(self):
-        return {'%s_dsn' % self.source_type: self.dsn}
+        source_options = super(MysqlSource, self).get_source_options()
+        if self.certificate:
+            cert_options = self.certificate.get_options()
+            source_options.update(cert_options)
+        return source_options
 
 
-class XML(AbstractSourceType):
-    source_type = XML_SOURCE_TYPE
-
-    def __init__(self, command):
-        self.command = command
+class MssqlSource(BaseDB):
+    def __init__(self, *args, **kwargs):
+        self.winauth = kwargs.get('winauth')
+        self.unicode = kwargs.get('unicode')
+        super(MssqlSource, self).__init__(*args, **kwargs)
 
     def get_source_options(self):
-        return {'%s_command' % self.source_type: self.command}
+        source_options = super(MssqlSource, self).get_source_options()
+
+        if self.winauth is not None:
+            source_options['mssql_winauth'] = int(bool(self.winauth))
+        if self.unicode is not None:
+            source_options['mssql_unicode'] = int(bool(self.unicode))
+
+        return source_options
+
+
+

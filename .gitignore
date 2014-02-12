@@ -5,6 +5,7 @@ sphinx.conf
 
 syntax: glob
 
+src/*
 htmlcov/*
 build/*
 sphinxsearch.egg-info/*

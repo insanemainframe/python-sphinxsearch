@@ -7,7 +7,7 @@ from ..utils import IndexerBlock, ServerBlock
 
 class Engine(object):
 
-    def __init__(self, api, server, indexer):
+    def __init__(self, server, indexer, api):
         self.api = api
         self.server = server
         self.indexer = indexer

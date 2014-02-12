@@ -5,6 +5,7 @@ import unittest
 from itertools import product
 from .utils import (get_api, get_servers, get_indexers,
                     get_schemas, get_valid_indexes)
+from .config import
 
 
 class Test(unittest.TestCase):
@@ -39,7 +40,7 @@ class Test(unittest.TestCase):
             engine_kwargs = dict(api=sphinxapi, server=server_cls(),
                                  indexer=indexer_cls(), indexes=index_set)
 
-            engine_kwargs_keys = engine_kwargs.keys()
+            engine_kwargs_keys = list(engine_kwargs.keys())
             rng_list = range(len(engine_kwargs_keys))
 
             for pop_args in [engine_kwargs_keys[:n] for n in rng_list]:
@@ -54,7 +55,7 @@ class Test(unittest.TestCase):
                     engine.extend_indexes(index_set)
 
                 else:
-                    rplc_kwargs = {k: engine_kwargs[k] for k in pop_args}
+                    rplc_kwargs = dict([(k, engine_kwargs[k]) for k in pop_args])
                     engine = engine.replace(**rplc_kwargs)
 
                 assert set(engine.indexes) == set(index_set), engine.indexes
@@ -63,8 +64,7 @@ class Test(unittest.TestCase):
 
                 conf = engine.get_conf()
                 if not writed:
-                    engine.write('sphinx.conf')
-                    writed = True
+                    engine.save('sphinx.conf')
 
     def test_pgsql(self):
         pass

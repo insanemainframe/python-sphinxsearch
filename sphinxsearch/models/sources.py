@@ -12,7 +12,7 @@ class IndexMeta(ABCMeta):
 
         cls_attr_names = [nm for nm in dir(src_cls) if not nm.startswith('__')]
 
-        cls_dict = {name: getattr(src_cls, name) for name in cls_attr_names}
+        cls_dict = dict([(name, getattr(src_cls, name)) for name in cls_attr_names])
 
         if not src_cls.__abstract__:
             cls.validate(cls_name, cls_parents, cls_dict)
