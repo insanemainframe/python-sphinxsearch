@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from ..utils import OptionableMeta, OptionableBase
+from .base import OptionableMeta, OptionableBase
 
 
 class _IndexerMeta(OptionableMeta):

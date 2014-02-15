@@ -43,7 +43,7 @@ class Index(object):
 
     #
     @classmethod
-    def get_conf_blocks(cls, engine):
+    def get_option_dicts(cls, engine):
         if is_abstract(cls):
             raise NotImplementedError('Cannot get conf for abstract index')
 
@@ -55,7 +55,7 @@ class Index(object):
             key, value = attr.get_option(name, source_type)
             attr_conf_options[key] = value
 
-        return cls.__source__.get_conf_blocks(cls, attr_conf_options)
+        return cls.__source__.get_option_dicts(cls, attr_conf_options)
 
     @classmethod
     def get_name(cls):

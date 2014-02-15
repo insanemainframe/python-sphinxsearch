@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from ..session import Session
-from ..utils import OptionableMeta, OptionableBase
+from .base import OptionableMeta, OptionableBase
 
 
 class _SearchServerMeta(OptionableMeta):

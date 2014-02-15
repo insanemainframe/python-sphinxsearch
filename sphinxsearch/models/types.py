@@ -2,7 +2,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from .const import RT_SOURCE_TYPE, SQL_SOURCE_TYPE, XML_SOURCE_TYPE
-from ..utils import IndexBlock, SourceBlock
 
 
 __all__ = ['RT', 'ODBC', 'XML', 'MysqlCertificate',
@@ -13,7 +12,7 @@ class AbstractIndexType(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod  # pragma: no cover
-    def get_conf_blocks(index, attrs_conf):
+    def get_option_dicts(index, attrs_conf):
         """"""
 
     @abstractproperty  # pragma: no cover
@@ -24,29 +23,32 @@ class AbstractIndexType(object):
 class RT(AbstractIndexType):
     source_type = RT_SOURCE_TYPE
 
-    def get_conf_blocks(self, index, attrs_options):
+    def get_option_dicts(self, index, attrs_options):
         index_name = index.get_name()
 
-        return IndexBlock(index_name, type=self.source_type, **attrs_options)
+        options = {}
+        options['type'] = self.source_type
+        options.update(attrs_options)
+
+        return {index_name: options}
 
 
 class AbstractSourceType(AbstractIndexType):
 
-    def get_conf_blocks(self, index, attrs_options):
+    def get_option_dicts(self, index, attrs_options):
         index_name = index.get_name()
         source_name = index_name
 
         index_options = self.get_index_options(index)
-        index_block = IndexBlock(index_name, source=source_name, **index_options)
-        source_block = self.get_source_block_conf(index, attrs_options)
-        source_block['source'] = source_name
+        index_options['source'] = source_name
 
-        return index_block, source_block
+        source_options = self.get_source_block_conf(index, attrs_options)
+
+        return {index_name: index_options, source_name: source_options}
 
     def get_source_block_conf(self, index, attrs_conf):
-        source_name = index.get_name()
         source_options = self.get_source_options()
-        return SourceBlock(source_name, **source_options)
+        return source_options
 
     def get_index_options(self, index):
         return {}
@@ -54,6 +56,7 @@ class AbstractSourceType(AbstractIndexType):
     @abstractmethod  # pragma: no cover
     def get_source_options(self):
         """"""
+
 
 class ODBC(AbstractSourceType):
     source_type = SQL_SOURCE_TYPE

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import unittest
+
 from tempfile import gettempdir
 from os.path import join
 
-import sphinxapi
 
-from sphinxsearch import SearchServer
 from sphinxsearch.models import Index, Int, String, Bool, TimeStamp, MVA, Float, PgsqlSource
+
 
 HOST = 'localhost'
 PORT = '4321'
@@ -15,24 +16,44 @@ TMP_ROOT = join(gettempdir(), 'sphinxsearch_tmp')
 MAX_MATCHES = 10000
 LOG_DIR = join(TMP_ROOT, 'logs')
 
-my_server = SearchServer(jost=HOST, port=PORT)
 
-my_server.read_timeout = 5
-my_server.client_timeout = 300
-my_server.max_children = 0
-my_server.pid_file = join(TMP_ROOT, 'searchd.pid')
-my_server.max_matches = MAX_MATCHES
-my_server.log = join(LOG_DIR, 'searchd.log')
-my_server.workers = 'prefork'
-my_server.max_filter_values = 8192
-my_server.preopen_indexes = True
-my_server.seamless_rotate = True
+def get_indexer():
+    from sphinxsearch.engine.indexer import Indexer
+
+    indexer = Indexer()
+    indexer.mem_limit = '32M'
+
+    return indexer
 
 
-engine = Engine()
-engine.set_api(sphinxapi)
-engine.set_server(my_server)
-engine.set_conf('sphinx.conf')
+def get_server():
+    from sphinxsearch import SearchServer
+
+    my_server = SearchServer(host=HOST, port=PORT)
+
+    my_server.read_timeout = 5
+    my_server.client_timeout = 300
+    my_server.max_children = 0
+    my_server.pid_file = join(TMP_ROOT, 'searchd.pid')
+    my_server.max_matches = MAX_MATCHES
+    my_server.log = join(LOG_DIR, 'searchd.log')
+    my_server.workers = 'prefork'
+    my_server.max_filter_values = 8192
+    my_server.preopen_indexes = True
+    my_server.seamless_rotate = True
+    return my_server
+
+
+def get_engine(api, server, indexer, models):
+    from sphinxsearch.engine import Engine
+
+    engine = Engine()
+    engine.api = api
+    engine.server = server
+    engine.indexer = indexer
+    engine.set_conf('sphinx.conf')
+
+    return engine
 
 
 class AbstractProductsIndex(Index):
@@ -88,6 +109,20 @@ class RakutenProducts(AnyshopProducts):
     pass
 
 
+class Test(unittest.TestCase):
+    def setUp(self):
+        import sphinxapi
+
+        self.server = get_server()
+        self.api = sphinxapi
+        self.indexer = get_indexer()
+        self.engine = get_engine(self.api, self.server, self.indexer, set())
+
+    def test(self):
+        print self.engine.session()
+
+        self.engine.add_index(RakutenProducts)
+
+        print self.engine.create_config()
 
 
-# my_engine = Engine(server, indexer, api=api)

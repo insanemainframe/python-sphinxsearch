@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from ..utils import is_abstract
 from .server import SearchServer
 from .indexer import Indexer
+from .const import CONFIG_INDENT
 
 
 class Engine(object):
@@ -12,36 +13,54 @@ class Engine(object):
         self.server = None
         self.indexer = None
         self.indexes = set()
+        self.conf_file = None
+
+    def set_conf(self, conf_file):
+        self.conf_file = conf_file
 
     def get_conf(self):
-        block_str_list = []
+        return self.conf_file
 
-        for block in self.get_conf_blocks():
-            block_body = unicode(block)
-            block_str_list.append(block_body)
+    def create_config(self):
+        blocks_dict = {}
 
-        return '\n'.join(block_str_list)
+        server_options_dict = self.server.get_options()
+        indexer_options_dict = self.indexer.get_options()
 
-    def save(self, path):
-        config_str = self.get_conf()
-        with open(path, 'w') as f:
+        models_options_dict = self.get_models_dict()
+
+        blocks_dict.update(server_options_dict)
+        blocks_dict.update(indexer_options_dict)
+        blocks_dict.update(models_options_dict)
+
+        str_list = []
+
+        for block_name, block_attrs in blocks_dict.items():
+            block_body_list = ['%s = %s' % (ak, av) for ak, av in block_attrs.items()]
+            block_body = ('\n%s' % CONFIG_INDENT).join(block_body_list)
+            block = """ %s\n{%s\n}""" % (block_name, block_body)
+            str_list.append(block)
+
+        return '\n'.join(str_list)
+
+    def save(self):
+        if self.conf_file is None:
+            raise RuntimeError('Engine must provide conf_file')
+
+        config_str = self.create_config()
+        with open(self.conf_file, 'w') as f:
             f.write(config_str)
 
-    def get_conf_blocks(self):
-        server_blocks = self.server.get_conf_blocks(self)
-        indexer_blocks = self.indexer.get_conf_blocks(self)
-        indexes_blocks = self.get_indexes_blocks()
-        return indexes_blocks + server_blocks + indexer_blocks
-
-    def get_indexes_blocks(self):
-        indexes_blocks = []
+    def get_models_dict(self):
+        indexes_blocks = {}
 
         for index in self.indexes:
             if is_abstract(index):
                 continue
-            indexes_blocks.extend(index.get_conf_blocks(self))
+            index_option_dicts = index.get_option_dicts(self)
+            indexes_blocks.update(index_option_dicts)
 
-        return filter(bool, indexes_blocks)
+        return indexes_blocks
 
     def add_index(self, index):
         self.indexes.add(index)
