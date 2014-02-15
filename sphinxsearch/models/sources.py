@@ -3,19 +3,24 @@ from abc import ABCMeta
 
 from .attrs import AbstractAttr
 from .types import AbstractIndexType
+from ..utils import is_abstract, set_abstract
 
 
 class IndexMeta(ABCMeta):
     def __new__(cls, cls_name, cls_parents, cls_dict):
         src_cls = ABCMeta.__new__(cls, cls_name, cls_parents, cls_dict)
-        src_cls.__abstract__ = '__metaclass__' in cls_dict
+
+        is_base = cls_dict.get('__metaclass__') == cls
+        is_abc = is_base or cls_dict.pop('__abstract__', False)
+
+        set_abstract(src_cls, is_abc)
 
         cls_attr_names = [nm for nm in dir(src_cls) if not nm.startswith('__')]
 
         cls_dict = dict([(name, getattr(src_cls, name)) for name in cls_attr_names])
 
-        if not src_cls.__abstract__:
-            cls.validate(cls_name, cls_parents, cls_dict)
+        if not is_abstract(src_cls):
+            cls.validate(src_cls)
             source_attrs_dict = {}
 
             for name, attr in cls_dict.items():
@@ -27,9 +32,9 @@ class IndexMeta(ABCMeta):
         return src_cls
 
     @staticmethod
-    def validate(cls_name, cls_parents, cls_dict):
-        assert 'type' in cls_dict
-        assert isinstance(cls_dict['type'], AbstractIndexType)
+    def validate(src_cls):
+        assert hasattr(src_cls, '__source__')
+        assert isinstance(src_cls.__source__, AbstractIndexType)
 
 
 class Index(object):
@@ -39,10 +44,10 @@ class Index(object):
     #
     @classmethod
     def get_conf_blocks(cls, engine):
-        if cls.__abstract__:
+        if is_abstract(cls):
             raise NotImplementedError('Cannot get conf for abstract index')
 
-        source_type = cls.type.source_type
+        source_type = cls.__source__.source_type
 
         attr_conf_options = {}
 
@@ -50,7 +55,7 @@ class Index(object):
             key, value = attr.get_option(name, source_type)
             attr_conf_options[key] = value
 
-        return cls.type.get_conf_blocks(cls, attr_conf_options)
+        return cls.__source__.get_conf_blocks(cls, attr_conf_options)
 
     @classmethod
     def get_name(cls):

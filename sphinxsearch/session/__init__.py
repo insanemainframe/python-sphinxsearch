@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
 
 
-class SessionFactory(object):
-    def __init__(self, engine):
-        self.engine = engine
-
-    def __call__(self):
-        return Session(self.engine)
-
-
 class Session(object):
 
-    def __init__(self, engine):
-        self.engine = engine
-        self.conn = engine.get_connection()
+    def __init__(self, api, host, port):
+        self.api = api
+        self.host = host
+        self.port = port
 
     def __enter__(self):
         pass

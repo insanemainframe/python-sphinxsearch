@@ -5,7 +5,7 @@ import unittest
 from itertools import product
 from .utils import (get_api, get_servers, get_indexers,
                     get_schemas, get_valid_indexes)
-from .config import
+# from .config import
 
 
 class Test(unittest.TestCase):

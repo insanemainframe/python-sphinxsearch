@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-
-from ..utils import IndexerBlock, ServerBlock
+from ..utils import is_abstract
+from .server import SearchServer
+from .indexer import Indexer
 
 
 class Engine(object):
-
-    def __init__(self, server, indexer, api):
-        self.api = api
-        self.server = server
-        self.indexer = indexer
+    def __init__(self):
+        self.api = None
+        self.server = None
+        self.indexer = None
         self.indexes = set()
 
     def get_conf(self):
@@ -37,7 +37,7 @@ class Engine(object):
         indexes_blocks = []
 
         for index in self.indexes:
-            if index.__abstract__:
+            if is_abstract(index):
                 continue
             indexes_blocks.extend(index.get_conf_blocks(self))
 
@@ -64,6 +64,14 @@ class Engine(object):
         new_inst.extend_indexes(indexes)
         return new_inst
 
+    def session(self, **kwargs):
+        if self.server is None:
+            raise RuntimeError('Ebgine must provide server')
+        if self.api is None:
+            raise RuntimeError('Ebgine must provide api')
+
+        return self.server.get_session(self.api, **kwargs)
+
 
 class BlockConfMixin(object):
     def get_conf_blocks(self, engine):
@@ -76,35 +84,4 @@ class BlockConfMixin(object):
         return [self.block_type('', **options_dict)]
 
 
-class Indexer(BlockConfMixin):
-    block_type = IndexerBlock
-    options = ['mem_limit', 'max_iops',
-               'max_iosize', 'max_xmlpipe2_field',
-               'write_buffer', 'max_file_field_buffer',
-               'on_file_field_error']
-
-
-class SearchServer(BlockConfMixin):
-    block_type = ServerBlock
-    options = ['listen', 'address',
-               'port', 'log',
-               'query_log', 'query_log_format',
-               'read_timeout', 'client_timeout',
-               'max_children', 'pid_file',
-               'max_matches', 'seamless_rotate',
-               'preopen_indexes', 'unlink_old',
-               'attr_flush_period', 'ondisk_dict_default',
-               'max_packet_size', 'mva_updates_pool',
-               'crash_log_path', 'max_filters',
-               'max_filter_values', 'listen_backlog',
-               'read_buffer', 'read_unhinted',
-               'max_batch_queries', 'subtree_docs_cache',
-               'subtree_hits_cache', 'workers',
-               'dist_threads', 'binlog_path',
-               'binlog_flush', 'binlog_max_log_size',
-               'collation_server', 'collation_libc_locale',
-               'plugin_dir', 'mysql_version_string',
-               'rt_flush_period', 'thread_stack',
-               'expansion_limit', 'compat_sphinxql_magics',
-               'watchdog', 'prefork_rotation_throttle']
-
+__all__ = ['Engine', 'SearchServer', 'Indexer']

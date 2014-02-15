@@ -5,7 +5,8 @@ from .const import RT_SOURCE_TYPE, SQL_SOURCE_TYPE, XML_SOURCE_TYPE
 from ..utils import IndexBlock, SourceBlock
 
 
-__all__ = ['RT', 'DB', 'ODBC', 'XML']
+__all__ = ['RT', 'ODBC', 'XML', 'MysqlCertificate',
+           'MysqlSource', 'MssqlSource', 'PgsqlSource']
 
 
 class AbstractIndexType(object):
@@ -126,7 +127,7 @@ class MysqlCertificate(object):
 class MysqlSource(BaseDB):
     def __init__(self, *args, **kwargs):
         self.certificate = kwargs.get('certificate')
-        super(MysqlSource, self).__init__(*args, **kwargs)
+        super(MysqlSource, self).__init__('mysql', *args, **kwargs)
 
     def get_source_options(self):
         source_options = super(MysqlSource, self).get_source_options()
@@ -140,7 +141,7 @@ class MssqlSource(BaseDB):
     def __init__(self, *args, **kwargs):
         self.winauth = kwargs.get('winauth')
         self.unicode = kwargs.get('unicode')
-        super(MssqlSource, self).__init__(*args, **kwargs)
+        super(MssqlSource, self).__init__('mssql', *args, **kwargs)
 
     def get_source_options(self):
         source_options = super(MssqlSource, self).get_source_options()
@@ -151,6 +152,11 @@ class MssqlSource(BaseDB):
             source_options['mssql_unicode'] = int(bool(self.unicode))
 
         return source_options
+
+
+class PgsqlSource(BaseDB):
+    def __init__(self, *args, **kwargs):
+        super(PgsqlSource, self).__init__('pgsql', *args, **kwargs)
 
 
 

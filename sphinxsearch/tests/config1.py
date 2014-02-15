@@ -4,8 +4,10 @@ from __future__ import unicode_literals
 from tempfile import gettempdir
 from os.path import join
 
+import sphinxapi
+
 from sphinxsearch import SearchServer
-from sphinxsearch.models import Index, Int, String, Bool, TimeStamp, MVA, Float, DB
+from sphinxsearch.models import Index, Int, String, Bool, TimeStamp, MVA, Float, PgsqlSource
 
 HOST = 'localhost'
 PORT = '4321'
@@ -13,27 +15,31 @@ TMP_ROOT = join(gettempdir(), 'sphinxsearch_tmp')
 MAX_MATCHES = 10000
 LOG_DIR = join(TMP_ROOT, 'logs')
 
+my_server = SearchServer(jost=HOST, port=PORT)
 
-class MySearchServer(SearchServer):
-    listen = '%s:%s' % (HOST, PORT)
-    read_timeout = 5
-    client_timeout = 300
-    max_children = 0
-    pid_file = join(TMP_ROOT, 'searchd.pid')
-    max_matches = MAX_MATCHES
-    log = join(LOG_DIR, 'searchd.log')
-    workers = 'prefork'
-    max_filter_values = 8192
+my_server.read_timeout = 5
+my_server.client_timeout = 300
+my_server.max_children = 0
+my_server.pid_file = join(TMP_ROOT, 'searchd.pid')
+my_server.max_matches = MAX_MATCHES
+my_server.log = join(LOG_DIR, 'searchd.log')
+my_server.workers = 'prefork'
+my_server.max_filter_values = 8192
+my_server.preopen_indexes = True
+my_server.seamless_rotate = True
 
-    preopen_indexes = True
-    seamless_rotate = True
+
+engine = Engine()
+engine.set_api(sphinxapi)
+engine.set_server(my_server)
+engine.set_conf('sphinx.conf')
 
 
 class AbstractProductsIndex(Index):
     __abstract__ = True
-    source_type = DB(type='pgsql', host=HOST,
-                     port=5432, db='nazya_db',
-                     user='nazya', password='pass')
+    __source__ = PgsqlSource(host=HOST,
+                             port=5432, db='nazya_db',
+                             user='nazya', password='pass')
 
     path = '/var/www/nazya/nazya/var/sphinx/index_data/data_anyshop_products'
     docinfo = 'extern'
@@ -78,6 +84,10 @@ class AnyshopProducts(AbstractProductsIndex):
     property_values_ids = MVA(Int, query='SELECT "base_nazyaproduct_property_values"."nazyaproduct_id"')
 
 
+class RakutenProducts(AnyshopProducts):
+    pass
 
 
-my_engine = Engine(server, indexer, api=api)
+
+
+# my_engine = Engine(server, indexer, api=api)
