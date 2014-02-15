@@ -37,8 +37,8 @@ class Engine(object):
 
         for block_name, block_attrs in blocks_dict.items():
             block_body_list = ['%s = %s' % (ak, av) for ak, av in block_attrs.items()]
-            block_body = ('\n%s' % CONFIG_INDENT).join(block_body_list)
-            block = """ %s\n{%s\n}""" % (block_name, block_body)
+            block_body = ('\n%s' % CONFIG_INDENT).join([''] + block_body_list)
+            block = """%s\n{%s\n}\n""" % (block_name, block_body)
             str_list.append(block)
 
         return '\n'.join(str_list)

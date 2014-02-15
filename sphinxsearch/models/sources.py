@@ -29,7 +29,16 @@ class IndexMeta(ABCMeta):
 
             src_cls.__attrs__ = source_attrs_dict
 
+        source_name = cls_dict.get('__sourcename__') or cls.get_source_name(src_cls)
+        src_cls.__sourcename__ = source_name
+
         return src_cls
+
+    @classmethod
+    def get_source_name(cls, index_cls):
+        name = index_cls.__name__
+        module_name = index_cls.__module__.split('.')[-1]
+        return ('%s_%s' % (module_name, name)).lower()
 
     @staticmethod
     def validate(src_cls):
@@ -58,17 +67,8 @@ class Index(object):
         return cls.__source__.get_option_dicts(cls, attr_conf_options)
 
     @classmethod
-    def get_name(cls):
-        if hasattr(cls, '__source_name__'):
-            return cls.__source_name__
-
-        name = cls.__name__
-        module_name = cls.__module__.split('.')[-1]
-        return ('%s_%s' % (module_name, name)).lower()
-
-    @classmethod
     def get_index_names(cls):
-        names = (cls.get_name(),)
+        names = (cls.__sourcename__,)
         if cls.__delta__:
             names = names
         return names

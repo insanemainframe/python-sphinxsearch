@@ -12,7 +12,7 @@ from sphinxsearch.models import Index, Int, String, Bool, TimeStamp, MVA, Float,
 
 HOST = 'localhost'
 PORT = '4321'
-TMP_ROOT = join(gettempdir(), 'sphinxsearch_tmp')
+TMP_ROOT = join(gettempdir())
 MAX_MATCHES = 10000
 LOG_DIR = join(TMP_ROOT, 'logs')
 
@@ -124,5 +124,11 @@ class Test(unittest.TestCase):
         self.engine.add_index(RakutenProducts)
 
         print self.engine.create_config()
+
+        conf_file_path = join(TMP_ROOT, 'sphinx.conf')
+
+        self.engine.set_conf(conf_file_path)
+
+        self.engine.save()
 
 

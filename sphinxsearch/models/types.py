@@ -24,27 +24,33 @@ class RT(AbstractIndexType):
     source_type = RT_SOURCE_TYPE
 
     def get_option_dicts(self, index, attrs_options):
-        index_name = index.get_name()
+        option_dicts = {}
 
-        options = {}
-        options['type'] = self.source_type
-        options.update(attrs_options)
+        for index_name in index.get_index_names():
+            options = {}
+            options['type'] = self.source_type
+            options.update(attrs_options)
 
-        return {index_name: options}
+            option_dicts[index_name] = options
+
+        return option_dicts
 
 
 class AbstractSourceType(AbstractIndexType):
 
     def get_option_dicts(self, index, attrs_options):
-        index_name = index.get_name()
-        source_name = index_name
+        option_dicts = {}
 
-        index_options = self.get_index_options(index)
-        index_options['source'] = source_name
+        for index_name in index.get_index_names():
+            source_name = index_name
+            source_options = self.get_source_block_conf(index, attrs_options)
+            option_dicts['source %s' % source_name] = source_options
 
-        source_options = self.get_source_block_conf(index, attrs_options)
+            index_options = self.get_index_options(index)
+            index_options['source'] = source_name
+            option_dicts['index %s' % source_name] = index_options
 
-        return {index_name: index_options, source_name: source_options}
+        return option_dicts
 
     def get_source_block_conf(self, index, attrs_conf):
         source_options = self.get_source_options()
@@ -75,12 +81,15 @@ class XML(AbstractSourceType):
         self.command = command
         self.fixup_utf8 = fixup_utf8
 
-    def get_source_options(self):
+    def get_option_dicts(self):
+        option_dicts = {}
+
         source_options = {}
         source_options['%s_command' % self.source_type] = self.command
         if self.fixup_utf8 is not None:
             source_options['xmlpipe_fixup_utf8'] = int(bool(self.fixup_utf8))
-        return source_options
+
+        return option_dicts
 
 
 class BaseDB(AbstractSourceType):
