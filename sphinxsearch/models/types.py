@@ -43,8 +43,7 @@ class AbstractSourceType(AbstractIndexType):
 
         for index_name in index.get_index_names():
             source_name = index_name
-            source_options = self.get_source_block_conf(index, attrs_options)
-            option_dicts['source %s' % source_name] = source_options
+            option_dicts['source %s' % source_name] = attrs_options
 
             index_options = self.get_index_options(index)
             index_options['source'] = source_name
@@ -52,8 +51,8 @@ class AbstractSourceType(AbstractIndexType):
 
         return option_dicts
 
-    def get_source_block_conf(self, index, attrs_conf):
-        source_options = self.get_source_options()
+    def get_source_options(self, index, attrs_options):
+        print attrs_options
         return source_options
 
     def get_index_options(self, index):

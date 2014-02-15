@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 import unittest
 
@@ -38,9 +38,11 @@ def get_server():
     my_server.max_matches = MAX_MATCHES
     my_server.log = join(LOG_DIR, 'searchd.log')
     my_server.workers = 'prefork'
-    my_server.max_filter_values = 8192
     my_server.preopen_indexes = True
     my_server.seamless_rotate = True
+
+    my_server.set_option('max_filter_values', 8192)
+
     return my_server
 
 
@@ -119,11 +121,11 @@ class Test(unittest.TestCase):
         self.engine = get_engine(self.api, self.server, self.indexer, set())
 
     def test(self):
-        print self.engine.session()
+        print(self.engine.session())
 
         self.engine.add_index(RakutenProducts)
 
-        print self.engine.create_config()
+        print(self.engine.create_config())
 
         conf_file_path = join(TMP_ROOT, 'sphinx.conf')
 

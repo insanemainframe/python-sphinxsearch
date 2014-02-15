@@ -70,5 +70,6 @@ class Index(object):
     def get_index_names(cls):
         names = (cls.__sourcename__,)
         if cls.__delta__:
-            names = names
+            delta_index_name = '{}_delta : {}'.format(cls.__sourcename__)
+            names = names + (delta_index_name,)
         return names

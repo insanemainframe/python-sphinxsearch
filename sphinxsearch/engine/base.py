@@ -34,13 +34,31 @@ class OptionableMeta(type):
 
 
 class OptionableBase(object):
+    def __init__(self):
+        self.user_options = {}
+
     def get_options_dict(self):
         opt_dict = {}
-        for opt_name in self.__class__.__metaclass__.OPTIONS:
+
+        meta_options_names = self.__class__.__metaclass__.OPTIONS
+        for opt_name in meta_options_names:
             opt_value = getattr(self, opt_name)
             if opt_value is not None:
                 opt_dict[opt_name] = opt_value
+
+        user_options = self.user_options.items()
+        opt_dict.update(user_options)
+
         return opt_dict
 
     def get_options(self):
         return {self.option_block_name: self.get_options_dict()}
+
+    def set_option(self, name, value):
+        self.user_options[name] = value
+
+    def get_option(self, name):
+        return self.user_options[name]
+
+    def del_option(self, name, value):
+        return self.user_options.pop(name, None)

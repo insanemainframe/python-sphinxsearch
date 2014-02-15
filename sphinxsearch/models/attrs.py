@@ -61,7 +61,13 @@ class MVA(AbstractAttr):
         assert issubclass(attr_type, AbstractUnitAttr), u'attr_type mut be AbstractUnitAttr subtype'
         self.attr_type_str = attr_type.type_str
         self.attr_type = attr_type
-        self.query = query
+        self._query = query
+
+    @property
+    def query(self):
+        if self._query:
+            return '\\n'.join(self._query.split('\n'))
+        return None
 
     def get_rt_option(self, attr_name):
         if self.attr_type in (Int, TimeStamp):

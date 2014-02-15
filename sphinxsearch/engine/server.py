@@ -52,6 +52,7 @@ class SearchServer(OptionableBase):
     option_block_name = 'server'
 
     def __init__(self, host=None, port=None, listen=None):
+        super(SearchServer, self).__init__()
         if listen and not (host or port):
             self.listen_str = unicode(listen)
         elif host and port:
