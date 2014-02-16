@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals, print_function
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from .const import RT_SOURCE_TYPE, SQL_SOURCE_TYPE, XML_SOURCE_TYPE
@@ -52,15 +54,11 @@ class AbstractSourceType(AbstractIndexType):
         return option_dicts
 
     def get_source_options(self, index, attrs_options):
-        print attrs_options
-        return source_options
+        print(attrs_options)
+        return attrs_options
 
     def get_index_options(self, index):
         return {}
-
-    @abstractmethod  # pragma: no cover
-    def get_source_options(self):
-        """"""
 
 
 class ODBC(AbstractSourceType):
