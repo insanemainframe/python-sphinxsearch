@@ -15,8 +15,18 @@ class CmdOptionConflictException(Exception):
         self.conflicted = ', '.join(keys)
 
 
-class CmdRequiredOptionException(Exception):
+class RequiredOptionException(Exception):
     pass
+
+
+def requires_kwarg(name):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            if name not in kwargs:
+                raise RequiredOptionException(name)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def check_options(kwargs):
@@ -30,7 +40,7 @@ def cmd_decorator(func):
             cmd_splitted = func(*args, **kwargs)
         except CmdUnknownOptionException as e:
             raise TypeError("%s are an invalid keyword arguments for this function" % e.message)
-        except CmdRequiredOptionException as e:
+        except RequiredOptionException as e:
             raise TypeError("you must provide '%s' argument" % e.message)
         except CmdOptionConflictException as e:
             option, conflicted = e.option, e.conflicted
@@ -40,7 +50,12 @@ def cmd_decorator(func):
     return wrapper
 
 
-def cmd_flag(name, option, default, conflicts=None):
+@requires_kwarg('default')
+def cmd_flag(name, option, **kwargs):
+    default = kwargs.pop('default', None)
+    conflicts = kwargs.pop('conflicts', None)
+    check_options(kwargs)
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             option_value = kwargs.pop(name, default)
@@ -56,7 +71,12 @@ def cmd_flag(name, option, default, conflicts=None):
     return decorator
 
 
-def cmd_named_kwarg(name, option, default=None, apply=None, conflicts=None):
+def cmd_named_kwarg(name, option, **kwargs):
+    default = kwargs.pop('default', None)
+    conflicts = kwargs.pop('conflicts', None)
+    apply = kwargs.pop('apply', None)
+    check_options(kwargs)
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             option_value = kwargs.pop(name, default)
@@ -78,6 +98,7 @@ def cmd_named_kwarg(name, option, default=None, apply=None, conflicts=None):
     return decorator
 
 
+@requires_kwarg('default')
 def cmd_named_arg(*args, **kwargs):
     kwargs['option'] = None
     return cmd_named_kwarg(*args, **kwargs)

@@ -4,9 +4,9 @@ from __future__ import unicode_literals
 from os.path import join
 
 from ..query.filters import Range
-from..utils.cmdtools import (CmdRequiredOptionException, cmd_flag,
-                             cmd_decorator, check_options, cmd_named_kwarg,
-                             cmd_named_arg)
+from ..utils.cmdtools import (cmd_flag, cmd_decorator,
+                              check_options, cmd_named_kwarg,
+                              cmd_named_arg, requires_kwarg)
 
 
 def index_to_str(*index):
@@ -20,16 +20,6 @@ def index_to_str(*index):
         return ' '.join(index)
     else:
         raise ValueError('index must be two strings or have get_index_names method ')
-
-
-def requires_kwarg(name):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            if name not in kwargs:
-                raise CmdRequiredOptionException(name)
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
 
 
 def cmd_loglevel_option(func):
@@ -74,11 +64,11 @@ def cmd_dst_range_popper(func):
 
 
 def indexer_cmd_wrapper(func):
-    func = cmd_flag('dump', '--dump-rows', False)(func)
-    func = cmd_flag('sql', '--print-queries', False)(func)
-    func = cmd_flag('debug', '--verbose', False)(func)
-    func = cmd_flag('noprogress', '--noprogress', False)(func)
-    func = cmd_flag('quiet', '--quiet', False)(func)
+    func = cmd_flag('dump', '--dump-rows', default=False)(func)
+    func = cmd_flag('sql', '--print-queries', default=False)(func)
+    func = cmd_flag('debug', '--verbose', default=False)(func)
+    func = cmd_flag('noprogress', '--noprogress', default=False)(func)
+    func = cmd_flag('quiet', '--quiet', default=False)(func)
     func = cmd_decorator(func)
     return func
 
@@ -90,11 +80,11 @@ def server_cmd_wrapper(func):
 
 def indextool_cmd_wrapper(func):
     func = cmd_decorator(func)
-    func = cmd_flag('optimize_rt_klists', '--optimize-rt-klists', False)(func)
-    func = cmd_flag('strip_path', '--strip-path', False)(func)
-    func = cmd_flag('strip_path', '--strip-path', False)(func)
-    func = cmd_flag('checkconfig', '--checkconfig', False)(func)
-    func = cmd_flag('quiet', '--quiet', False)(func)
+    func = cmd_flag('optimize_rt_klists', '--optimize-rt-klists', default=False)(func)
+    func = cmd_flag('strip_path', '--strip-path', default=False)(func)
+    func = cmd_flag('strip_path', '--strip-path', default=False)(func)
+    func = cmd_flag('checkconfig', '--checkconfig', default=False)(func)
+    func = cmd_flag('quiet', '--quiet', default=False)(default=func)
     return func
 
 
@@ -153,9 +143,9 @@ class Executor(object):
         return self.config_path
 
     @indexer_cmd_wrapper
-    @cmd_flag('rotate', '--rotate', True)
-    @cmd_flag('sighup_each', '--sighup-each', False)
-    @cmd_flag('nohup', '--nohup', False)
+    @cmd_flag('rotate', '--rotate', default=True)
+    @cmd_flag('sighup_each', '--sighup-each', default=False)
+    @cmd_flag('nohup', '--nohup', default=False)
     def reindex(self, *indexes, **kwargs):
         """
         >>> executor.reindex(Index, rotate=False)
@@ -176,10 +166,10 @@ class Executor(object):
         return cmd_splitted
 
     @indexer_cmd_wrapper
-    @cmd_flag('rotate', '--rotate', True)
-    @cmd_flag('keep_attrs', '--keep-attrs', False)
-    @cmd_flag('killlists', '--merge-killlists', False)
-    @cmd_flag('nohup', '--nohup', False)
+    @cmd_flag('rotate', '--rotate', default=True)
+    @cmd_flag('keep_attrs', '--keep-default=attrs', default=False)
+    @cmd_flag('killlists', '--merge-default=killlists', default=False)
+    @cmd_flag('nohup', '--nohup', default=False)
     @cmd_dst_range_popper
     def merge(self, *index):
         """
@@ -195,7 +185,7 @@ class Executor(object):
         return cmd_splitted
 
     @indexer_cmd_wrapper
-    @cmd_flag('freqs', '--buildfreqs', False)
+    @cmd_flag('freqs', '--buildfreqs', default=False)
     @requires_kwarg('outputfile')
     @requires_kwarg('limit')
     def buildstops(self, *indexes, **kwargs):
@@ -224,7 +214,7 @@ class Executor(object):
 
     @server_cmd_wrapper
     @cmd_named_kwarg('pidfile', '--pidfile')
-    @cmd_flag('block', '--stopwait', False)
+    @cmd_flag('block', '--stopwait', default=False)
     def stop(self):
         return [self.searchd, '--stop']
 
@@ -235,21 +225,21 @@ class Executor(object):
     @cmd_named_kwarg('port', '--port', conflicts=('listen',))
     @cmd_named_kwarg('host', '--host', conflicts=('listen',))
     # debug options
-    @cmd_flag('iostats', '--iostats', False)
-    @cmd_flag('cpustats', '--cpustats', False)
-    @cmd_flag('console', '--console', False)
-    @cmd_flag('safetrace', '--safetrace', False)
-    @cmd_flag('replay_flags', '--replay-flags', False)
+    @cmd_flag('iostats', '--iostats', default=False)
+    @cmd_flag('cpustats', '--cpustats', default=False)
+    @cmd_flag('console', '--console', default=False)
+    @cmd_flag('safetrace', '--safetrace', default=False)
+    @cmd_flag('replay_flags', '--replay-default=flags', default=False)
     # windows options
-    @cmd_flag('install', '--install', False, conflicts=['nodetach'])
-    @cmd_flag('delete', '--delete', False, conflicts=['nodetach'])
-    @cmd_flag('servicename', '--servicename', False, conflicts=['nodetach'])
-    @cmd_flag('ntservice', '--ntservice', False, conflicts=['nodetach'])
+    @cmd_flag('install', '--install', default=False, conflicts=['nodetach'])
+    @cmd_flag('delete', '--delete', default=False, conflicts=['nodetach'])
+    @cmd_flag('servicename', '--servicename', default=False, conflicts=['nodetach'])
+    @cmd_flag('ntservice', '--ntservice', default=False, conflicts=['nodetach'])
     #linux only option
-    @cmd_flag('nodetach', '--nodetach', False, conflicts=['install',
-                                                            'delete',
-                                                            'servicename',
-                                                            'ntservice'])
+    @cmd_flag('nodetach', '--nodetach', default=False, conflicts=['install',
+                                                                  'delete',
+                                                                  'servicename',
+                                                                  'ntservice'])
     @cmd_loglevel_option
     def start(self, **kwargs):
         return [self.searchd, '--start']
@@ -288,7 +278,7 @@ class Executor(object):
 
     @indextool_cmd_wrapper
     @cmd_named_arg('index', apply=index_to_str)
-    @cmd_flag('rotate', '--rotate', True)
+    @cmd_flag('rotate', '--rotate', default=True)
     def check(self):
         return [self.indextool, '--check']
 
