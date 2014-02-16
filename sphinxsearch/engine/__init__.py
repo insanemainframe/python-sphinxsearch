@@ -7,7 +7,7 @@ from ..utils import is_abstract
 from .server import SearchServer
 from .indexer import Indexer
 from .executor import Executor
-from .const import CONFIG_INDENT
+from ..utils.const import CONFIG_INDENT
 
 
 class Engine(object):
