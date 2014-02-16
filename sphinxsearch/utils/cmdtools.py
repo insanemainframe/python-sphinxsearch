@@ -98,7 +98,6 @@ def cmd_named_kwarg(name, option, **kwargs):
     return decorator
 
 
-@requires_kwarg('default')
 def cmd_named_arg(*args, **kwargs):
     kwargs['option'] = None
     return cmd_named_kwarg(*args, **kwargs)

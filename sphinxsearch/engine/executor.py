@@ -84,7 +84,7 @@ def indextool_cmd_wrapper(func):
     func = cmd_flag('strip_path', '--strip-path', default=False)(func)
     func = cmd_flag('strip_path', '--strip-path', default=False)(func)
     func = cmd_flag('checkconfig', '--checkconfig', default=False)(func)
-    func = cmd_flag('quiet', '--quiet', default=False)(default=func)
+    func = cmd_flag('quiet', '--quiet', default=False)(func)
     return func
 
 
