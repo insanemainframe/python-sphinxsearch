@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from ..session import Session
+from ..session import SessionFactory
 from .base import OptionableMeta, OptionableBase
 
 
@@ -59,11 +59,16 @@ class SearchServer(OptionableBase):
             self.listen_str = '%s:%s' % (host, port)
             self.host = host
             self.port = port
+            self.session_maker = SessionFactory()
+            self.session_maker.set_server(self)
         else:
             raise ValueError('You nust provide host and port or listen')
 
-    def get_session(self, api, **kwargs):
-        return Session(api, self.host, self.port, **kwargs)
+    def set_api(self, api):
+        self.api = api
+
+    def get_session(self, **kwargs):
+        return self.session_maker(**kwargs)
 
     def get_options_dict(self):
         opt_dict = super(SearchServer, self).get_options_dict()

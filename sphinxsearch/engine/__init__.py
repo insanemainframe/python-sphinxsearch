@@ -1,22 +1,65 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from os.path import join
+
 from ..utils import is_abstract
 from .server import SearchServer
 from .indexer import Indexer
+from .executor import Executor
 from .const import CONFIG_INDENT
 
 
 class Engine(object):
     def __init__(self):
-        self.api = None
-        self.server = None
-        self.indexer = None
-        self.indexes = set()
+        self._api = None
+        self._server = None
+        self._indexer = None
+        self._indexes = set()
         self.conf_file = None
+        self.executor = Executor()
+
+    @property
+    def api(self):
+        return self._api
+
+    @api.setter
+    def api(self, api):
+        self._api = api
+        if self._server is not None:
+            self._server.set_api(api)
+
+    @property
+    def server(self):
+        return self._server
+
+    @server.setter
+    def server(self, server):
+        self._server = server
+        if self._api is not None:
+            self._server.set_api(self.api)
+
+    @property
+    def indexer(self):
+        return self._indexer
+
+    @indexer.setter
+    def indexer(self, indexer):
+        self._indexer = indexer
+
+    @property
+    def indexes(self):
+        return iter(self._indexes)
+
+    def add_index(self, index):
+        self._indexes.add(index)
+
+    def extend_indexes(self, indexes):
+        self._indexes.update(indexes)
 
     def set_conf(self, conf_file):
         self.conf_file = conf_file
+        self.executor.set_conf(conf_file)
 
     def get_conf(self):
         return self.conf_file
@@ -62,12 +105,6 @@ class Engine(object):
 
         return indexes_blocks
 
-    def add_index(self, index):
-        self.indexes.add(index)
-
-    def extend_indexes(self, indexes):
-        self.indexes.update(indexes)
-
     def write(self, config_path):
         with open(config_path, 'w') as f:
             s = self.get_conf().encode('utf-8')
@@ -84,23 +121,7 @@ class Engine(object):
         return new_inst
 
     def session(self, **kwargs):
-        if self.server is None:
-            raise RuntimeError('Ebgine must provide server')
-        if self.api is None:
-            raise RuntimeError('Ebgine must provide api')
-
-        return self.server.get_session(self.api, **kwargs)
-
-
-class BlockConfMixin(object):
-    def get_conf_blocks(self, engine):
-        options_dict = {}
-        for name in self.options:
-            if not hasattr(self, name):
-                continue
-            options_dict[name] = getattr(self, name)
-
-        return [self.block_type('', **options_dict)]
+        return self.server.get_session(**kwargs)
 
 
 __all__ = ['Engine', 'SearchServer', 'Indexer']
