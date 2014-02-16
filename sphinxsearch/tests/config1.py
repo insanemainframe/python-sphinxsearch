@@ -133,4 +133,19 @@ class Test(unittest.TestCase):
 
         self.engine.save()
 
+        print(self.engine.executor.reindex(RakutenProducts))
+        print(self.engine.executor.buildstops(RakutenProducts,
+                                              outputfile='/tmp/stops.txt',
+                                              limit=100))
+        print(self.engine.executor.buildstops(RakutenProducts,
+                                              outputfile='/tmp/stops.txt',
+                                              limit=100,
+                                              freqs=True))
+        self.engine.set_conf('sphinx.conf')
+        self.assertEquals(self.engine.executor.get_conf(), 'sphinx.conf')
+        print(self.engine.executor.buildstops(RakutenProducts,
+                                              'arena_products',
+                                              outputfile='tmp/bar.txt',
+                                              limit=1000,
+                                              freqs=True))
 

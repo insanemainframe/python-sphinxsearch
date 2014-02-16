@@ -12,15 +12,73 @@ def index_to_str(*index):
         if isinstance(index, basestring):
             return unicode(index)
         else:
-            return ' '.join(index.get_names())
+            return ' '.join(index.get_index_names())
     elif len(index) == 2:
         return ' '.join(index)
     else:
-        raise ValueError('index must be two strings or have get_names method ')
+        raise ValueError('index must be two strings or have get_index_names method ')
+
+
+class CmdUnknownOptionException(Exception):
+    pass
+
+
+class CmdRequiredOptionException(Exception):
+    pass
+
+
+def cmd_decorator(func):
+    def wrapper(*args, **kwargs):
+        try:
+            cmd_splitted = func(*args, **kwargs)
+        except CmdUnknownOptionException as e:
+            raise TypeError("%s got an unexpected keyword argument ''%s" % (func, e.message))
+        except CmdRequiredOptionException as e:
+            raise TypeError("you must provide '%s' argument" % e.message)
+        else:
+            return ' '.join(cmd_splitted)
+    return wrapper
+
+
+def cmd_option(name, option, default):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            option_value = kwargs.pop(name, default)
+            cmd_splitted = list(func(*args, **kwargs))
+            if option_value:
+                cmd_splitted.append(option)
+            return cmd_splitted
+        return wrapper
+    return decorator
+
+
+def indexer_cmd(func):
+    func = cmd_option('dump', '--dump-rows', False)(func)
+    func = cmd_option('sql', '--print-queries', False)(func)
+    func = cmd_option('debug', '--verbose', False)(func)
+    func = cmd_option('noprogress', '--noprogress', False)(func)
+    func = cmd_option('quiet', '--quiet', False)(func)
+    func = cmd_decorator(func)
+    return func
 
 
 class Executor(object):
+    """
+    >>> executor = Executor()
+    """
     def __init__(self, prefix=''):
+        self.prefix = prefix
+
+    @property
+    def prefix(self):
+        return self._prefix
+
+    @prefix.setter
+    def prefix(self, prefix):
+        """
+        >>> executor.prefix = u'/usr/local/'
+        """
+        self._prefix = prefix
         self.search_cmd = join(prefix, 'search')
         self.searchd_cmd = join(prefix, 'searchd')
         self.indexer_cmd = join(prefix, 'indexer')
@@ -55,25 +113,43 @@ class Executor(object):
     def set_conf(self, config_path):
         self.config_path = config_path
 
-    def reindex(self, indexes, all=False, rotate=True):
+    def get_conf(self):
+        return self.config_path
+
+    @indexer_cmd
+    @cmd_option('rotate', '--rotate', True)
+    @cmd_option('sighup_each', '--sighup-each', False)
+    @cmd_option('nohup', '--nohup', False)
+    def reindex(self, *indexes, **kwargs):
+        """
+        >>> executor.reindex(Index, rotate=False)
+        >>> executor.reindex('main', 'delta', deleted=0)
+        >>> executor.reindex(all=True, sighup_each=True, dump='/tmp/dump.sql')
+        """
         cmd_splitted = [self.indexer]
+
+        all = kwargs.pop('all', False)
+        if kwargs:
+            raise CmdUnknownOptionException(kwargs.popitem()[0])
+
         if all:
             cmd_splitted.append('--all')
         else:
             cmd_splitted.extend(map(index_to_str, indexes))
-        if rotate:
-            cmd_splitted.append('--rotate')
-        return ' '.join(cmd_splitted)
 
+        return cmd_splitted
+
+    @indexer_cmd
+    @cmd_option('rotate', '--rotate', True)
+    @cmd_option('keep_attrs', '--keep-attrs', False)
+    @cmd_option('killlists', '--merge-killlists', False)
+    @cmd_option('nohup', '--nohup', False)
     def merge(self, *index, **kwargs):
         """
         >>> executor.merge(Index, rotate=False)
         >>> executor.merge('main', 'delta', deleted=0)
         >>> executor.merge(Main, Delta, deleted=Range(23, 556), rotate=True)
         """
-        rotate = kwargs.pop('rotate', True)
-        killlists = kwargs.pop('killlists', False)
-
         if kwargs:
             dst_attr, dst_range = kwargs.popitem()
             if isinstance(dst_range, Range):
@@ -82,9 +158,12 @@ class Executor(object):
             else:
                 start = int(dst_range)
                 end = int(dst_range)
-            dst_range_str = '%s %s' % (dst_attr, start, end)
+            dst_range_str = '%s %s %s' % (dst_attr, start, end)
         else:
             dst_range_str = ''
+
+        if kwargs:
+            raise CmdUnknownOptionException(kwargs.popitem()[0])
 
         cmd_splitted = [self.indexer, '--merge']
 
@@ -95,26 +174,31 @@ class Executor(object):
             cmd_splitted.append('--merge-dst-range')
             cmd_splitted.append(dst_range_str)
 
-        if killlists:
-            cmd_splitted.append('--merge-killlists')
+        return cmd_splitted
 
-        if rotate:
-            cmd_splitted.append('--rotate')
-        return ' '.join(cmd_splitted)
-
+    @indexer_cmd
+    @cmd_option('freqs', '--buildfreqs', False)
     def buildstops(self, *indexes, **kwargs):
-        outputfile = kwargs.pop('outputfile')
-        limit = kwargs.pop('limit')
-        freqs = kwargs.pop('freqs', False)
+        """
+        >>> executor.buildstops(Index, 'main', limit=500, freqs=True, outputfile='/tmp/stops.txt')
+        >>> executor.buildstops('main', 'delta', limit=5000, sql=True)
+        >>> executor.buildstops(Main, Delta, limit=9000, outputfile='/tmp/stops.txt')
+        """
+        outputfile = kwargs.pop('outputfile', None)
+        limit = kwargs.pop('limit', None)
+
+        if kwargs:
+            raise CmdUnknownOptionException(kwargs.popitem()[0])
+        if not limit:
+            raise CmdRequiredOptionException('outputfile')
+        if not outputfile:
+            raise CmdRequiredOptionException('limit')
 
         cmd_splitted = [self.indexer]
         cmd_splitted.extend(map(index_to_str, indexes))
         cmd_splitted.append('--buildstops')
 
         cmd_splitted.append(unicode(outputfile))
-        cmd_splitted.append(int(limit))
+        cmd_splitted.append(unicode(int(limit)))
+        return cmd_splitted
 
-        if freqs:
-            cmd_splitted.append('--buildfreqs')
-
-        return ' '.join(cmd_splitted)
