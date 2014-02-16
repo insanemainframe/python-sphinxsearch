@@ -4,6 +4,9 @@ from __future__ import unicode_literals
 from os.path import join
 
 from ..query.filters import Range
+from..utils.cmdtools import (CmdRequiredOptionException, cmd_flag,
+                             cmd_decorator, check_options, cmd_named_kwarg,
+                             cmd_named_arg)
 
 
 def index_to_str(*index):
@@ -19,83 +22,12 @@ def index_to_str(*index):
         raise ValueError('index must be two strings or have get_index_names method ')
 
 
-class CmdUnknownOptionException(Exception):
-    def __init__(self, option):
-        msg = ', '.join(keys)
-        super(CmdUnknownOptionException, self).__init__(msg)
-
-
-class CmdOptionConflictException(Exception):
-    def __init__(self, option, keys):
-        super(CmdOptionConflictException, self).__init__()
-        self.option = option
-        self.conflicted = ', '.join(keys)
-
-
-class CmdRequiredOptionException(Exception):
-    pass
-
-
-def check_options(kwargs):
-    if kwargs:
-        raise CmdUnknownOptionException(kwargs.keys())
-
-
 def requires_kwarg(name):
     def decorator(func):
         def wrapper(*args, **kwargs):
             if name not in kwargs:
                 raise CmdRequiredOptionException(name)
             return func(*args, **kwargs)
-        return wrapper
-    return decorator
-
-
-def cmd_decorator(func):
-    def wrapper(*args, **kwargs):
-        try:
-            cmd_splitted = func(*args, **kwargs)
-        except CmdUnknownOptionException as e:
-            raise TypeError("%s are an invalid keyword arguments for this function" % e.message)
-        except CmdRequiredOptionException as e:
-            raise TypeError("you must provide '%s' argument" % e.message)
-        except CmdOptionConflictException as e:
-            option, conflicted = e.option, e.conflicted
-            raise TypeError('option %s conflictz with options; %s' % (option, conflicted))
-        else:
-            return ' '.join(cmd_splitted)
-    return wrapper
-
-
-def cmd_option(name, option, default):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            option_value = kwargs.pop(name, default)
-            cmd_splitted = list(func(*args, **kwargs))
-            if option_value:
-                cmd_splitted.append(option)
-            return cmd_splitted
-        return wrapper
-    return decorator
-
-
-def cmd_named_option(name, option, default=None, apply=None, conflicts=None):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            option_value = kwargs.pop(name, default)
-            cmd_splitted = list(func(*args, **kwargs))
-            if option_value is not None:
-                # check conflicts
-                if conflicts:
-                    conf_keys = [k for k in conflicts if k in kwargs]
-                    if conf_keys:
-                        raise CmdOptionConflictException(name, conf_keys)
-
-                if callable(apply):
-                    option_value = apply(option_value)
-                cmd_splitted.append(option)
-                cmd_splitted.append(unicode(option_value))
-            return cmd_splitted
         return wrapper
     return decorator
 
@@ -119,18 +51,50 @@ def cmd_loglevel_option(func):
     return wrapper
 
 
-def indexer_cmd(func):
-    func = cmd_option('dump', '--dump-rows', False)(func)
-    func = cmd_option('sql', '--print-queries', False)(func)
-    func = cmd_option('debug', '--verbose', False)(func)
-    func = cmd_option('noprogress', '--noprogress', False)(func)
-    func = cmd_option('quiet', '--quiet', False)(func)
+def cmd_dst_range_popper(func):
+    def wrapper(*args, **kwargs):
+        if kwargs:
+            dst_attr, dst_range = kwargs.popitem()
+            if isinstance(dst_range, Range):
+                start = int(dst_range.start)
+                end = int(dst_range.end)
+            else:
+                start = int(dst_range)
+                end = int(dst_range)
+            dst_range_str = '%s %s %s' % (dst_attr, start, end)
+        else:
+            dst_range_str = ''
+
+        cmd_splitted = func(*args, **kwargs)
+        if dst_range_str:
+            cmd_splitted.append('--merge-dst-range')
+            cmd_splitted.append(dst_range_str)
+        return cmd_splitted
+    return wrapper
+
+
+def indexer_cmd_wrapper(func):
+    func = cmd_flag('dump', '--dump-rows', False)(func)
+    func = cmd_flag('sql', '--print-queries', False)(func)
+    func = cmd_flag('debug', '--verbose', False)(func)
+    func = cmd_flag('noprogress', '--noprogress', False)(func)
+    func = cmd_flag('quiet', '--quiet', False)(func)
     func = cmd_decorator(func)
     return func
 
 
-def server_cmd(func):
+def server_cmd_wrapper(func):
     func = cmd_decorator(func)
+    return func
+
+
+def indextool_cmd_wrapper(func):
+    func = cmd_decorator(func)
+    func = cmd_flag('optimize_rt_klists', '--optimize-rt-klists', False)(func)
+    func = cmd_flag('strip_path', '--strip-path', False)(func)
+    func = cmd_flag('strip_path', '--strip-path', False)(func)
+    func = cmd_flag('checkconfig', '--checkconfig', False)(func)
+    func = cmd_flag('quiet', '--quiet', False)(func)
     return func
 
 
@@ -188,10 +152,10 @@ class Executor(object):
     def get_conf(self):
         return self.config_path
 
-    @indexer_cmd
-    @cmd_option('rotate', '--rotate', True)
-    @cmd_option('sighup_each', '--sighup-each', False)
-    @cmd_option('nohup', '--nohup', False)
+    @indexer_cmd_wrapper
+    @cmd_flag('rotate', '--rotate', True)
+    @cmd_flag('sighup_each', '--sighup-each', False)
+    @cmd_flag('nohup', '--nohup', False)
     def reindex(self, *indexes, **kwargs):
         """
         >>> executor.reindex(Index, rotate=False)
@@ -211,44 +175,27 @@ class Executor(object):
 
         return cmd_splitted
 
-    @indexer_cmd
-    @cmd_option('rotate', '--rotate', True)
-    @cmd_option('keep_attrs', '--keep-attrs', False)
-    @cmd_option('killlists', '--merge-killlists', False)
-    @cmd_option('nohup', '--nohup', False)
-    def merge(self, *index, **kwargs):
+    @indexer_cmd_wrapper
+    @cmd_flag('rotate', '--rotate', True)
+    @cmd_flag('keep_attrs', '--keep-attrs', False)
+    @cmd_flag('killlists', '--merge-killlists', False)
+    @cmd_flag('nohup', '--nohup', False)
+    @cmd_dst_range_popper
+    def merge(self, *index):
         """
         >>> executor.merge(Index, rotate=False)
         >>> executor.merge('main', 'delta', deleted=0)
         >>> executor.merge(Main, Delta, deleted=Range(23, 556), rotate=True)
         """
-        if kwargs:
-            dst_attr, dst_range = kwargs.popitem()
-            if isinstance(dst_range, Range):
-                start = int(dst_range.start)
-                end = int(dst_range.end)
-            else:
-                start = int(dst_range)
-                end = int(dst_range)
-            dst_range_str = '%s %s %s' % (dst_attr, start, end)
-        else:
-            dst_range_str = ''
-
-        check_options(kwargs)
-
         cmd_splitted = [self.indexer, '--merge']
 
         index_str = index_to_str(*index)
         cmd_splitted.append(index_str)
 
-        if dst_range_str:
-            cmd_splitted.append('--merge-dst-range')
-            cmd_splitted.append(dst_range_str)
-
         return cmd_splitted
 
-    @indexer_cmd
-    @cmd_option('freqs', '--buildfreqs', False)
+    @indexer_cmd_wrapper
+    @cmd_flag('freqs', '--buildfreqs', False)
     @requires_kwarg('outputfile')
     @requires_kwarg('limit')
     def buildstops(self, *indexes, **kwargs):
@@ -270,37 +217,44 @@ class Executor(object):
         cmd_splitted.append(unicode(int(limit)))
         return cmd_splitted
 
-    @server_cmd
-    @cmd_option('pidfile', '--pidfile', False)
+    @server_cmd_wrapper
+    @cmd_named_kwarg('pidfile', '--pidfile')
     def status(self):
         return [self.searchd, '--status']
 
-    @server_cmd
-    @cmd_option('block', '--stopwait', False)
-    @cmd_named_option('pidfile', '--pidfile')
+    @server_cmd_wrapper
+    @cmd_named_kwarg('pidfile', '--pidfile')
+    @cmd_flag('block', '--stopwait', False)
     def stop(self):
         return [self.searchd, '--stop']
 
-    @server_cmd
-    @cmd_named_option('pidfile', '--pidfile')
-    @cmd_named_option('listen', '--listen', conflicts=('host', 'port'))
-    @cmd_named_option('port', '--port', conflicts=('listen',))
-    @cmd_named_option('host', '--host', conflicts=('listen',))
-    @cmd_named_option('index', '--index', apply=index_to_str)
-    @cmd_option('iostats', '--iostats', False)
-    @cmd_option('cpustats', '--cpustats', False)
-    @cmd_option('console', '--console', False)
-    @cmd_option('install', '--install', False)
-    @cmd_option('delete', '--delete', False)
-    @cmd_option('servicename', '--servicename', False)
-    @cmd_option('ntservice', '--ntservice', False)
-    @cmd_option('safetrace', '--safetrace', False)
-    @cmd_option('replay_flags', '--replay-flags', False)
+    @server_cmd_wrapper
+    @cmd_named_kwarg('index', '--index', apply=index_to_str)
+    @cmd_named_kwarg('pidfile', '--pidfile')
+    @cmd_named_kwarg('listen', '--listen', conflicts=('host', 'port'))
+    @cmd_named_kwarg('port', '--port', conflicts=('listen',))
+    @cmd_named_kwarg('host', '--host', conflicts=('listen',))
+    # debug options
+    @cmd_flag('iostats', '--iostats', False)
+    @cmd_flag('cpustats', '--cpustats', False)
+    @cmd_flag('console', '--console', False)
+    @cmd_flag('safetrace', '--safetrace', False)
+    @cmd_flag('replay_flags', '--replay-flags', False)
+    # windows options
+    @cmd_flag('install', '--install', False, conflicts=['nodetach'])
+    @cmd_flag('delete', '--delete', False, conflicts=['nodetach'])
+    @cmd_flag('servicename', '--servicename', False, conflicts=['nodetach'])
+    @cmd_flag('ntservice', '--ntservice', False, conflicts=['nodetach'])
+    #linux only option
+    @cmd_flag('nodetach', '--nodetach', False, conflicts=['install',
+                                                            'delete',
+                                                            'servicename',
+                                                            'ntservice'])
     @cmd_loglevel_option
     def start(self, **kwargs):
         return [self.searchd, '--start']
 
-    @server_cmd
+    @server_cmd_wrapper
     def restart(self, *args, **kwargs):
         pidfile = kwargs.pop('pidfile', None)
         new_pidfile = kwargs.pop('new_pidfile', pidfile)
@@ -316,3 +270,64 @@ class Executor(object):
         stop_cmd = self.stop(**stop_kwargs)
         start_cmd = self.start(*args, **start_kwargs)
         return [stop_cmd, ';', start_cmd]
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('file')
+    def dumpconfig(self):
+        return [self.indextool, '--dumpconfig']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('file')
+    def dumpheader(self):
+        return [self.indextool, '--dumpheader']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    def build_infixes(self):
+        return [self.indextool, '--build-infixes']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    @cmd_flag('rotate', '--rotate', True)
+    def check(self):
+        return [self.indextool, '--check']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    def dumpdict(self):
+        return [self.indextool, '--dumpdict']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    def dumpdocids(self):
+        return [self.indextool, '--dumpdocids']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    @cmd_named_kwarg('wordid', '--wordid', conflicts=['keyword'])
+    @cmd_named_arg('keyword', conflicts=['wordid'])
+    def dumphitlist(self):
+        return [self.indextool, '--dumphitlist']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    @cmd_named_arg('optfile')
+    def fold(self):
+        return [self.indextool, '--fold']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    def htmlstrip(self):
+        return [self.indextool, '--htmlstrip']
+
+    @indextool_cmd_wrapper
+    @cmd_named_arg('index', apply=index_to_str)
+    def morph(self):
+        return [self.indextool, '--morph']
+
+
+
+
+
+
+

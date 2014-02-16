@@ -134,10 +134,16 @@ class Test(unittest.TestCase):
 
         return engine
 
-    def test_server_cmd(self):
+    @property
+    def local_engine(self):
         engine = self.engine
         engine.set_conf('sphinx.conf')
         engine.save()
+        return engine
+
+    def test_server_start(self):
+        engine = self.local_engine
+
         print(engine.executor.status())
 
         print(engine.executor.start())
@@ -146,37 +152,53 @@ class Test(unittest.TestCase):
         print(engine.executor.start(index=RakutenProducts))
         print(engine.executor.start(index='main'))
 
+        print(engine.executor.start(port=1234))
+        print(engine.executor.start(listen='localhost:4321:mysql41'))
+
+        get_invalid_start = lambda: engine.executor.start(listen='localhost:4321:mysql41', port=1234)
+        self.assertRaises(TypeError, get_invalid_start)
+
+    def test_server_stop(self):
+        engine = self.local_engine
         print(engine.executor.stop())
         print(engine.executor.stop(block=True))
         print(engine.executor.stop(block=True, pidfile='/tmp/custom.pid'))
 
+    def test_server_restart(self):
+        engine = self.local_engine
         print(engine.executor.restart())
         print(engine.executor.restart(pidfile='/tmp/custom.pid'))
         print(engine.executor.restart(pidfile='/tmp/custom.pid',
                                       new_pidfile='/tmp/custom_new.pid',
-                                      logdebug=i))
+                                      logdebug=3))
 
-        print(engine.executor.start(port=1234))
-        print(engine.executor.start(listen='localhost:4321:mysql41'))
-        print(engine.executor.start(listen='localhost:4321:mysql41', port=1234))
+    def test_indexer(self):
+        engine = self.local_engine
+
+        print(engine.executor.reindex(RakutenProducts))
+        print(engine.executor.reindex(all=True, sighup_each=True))
+
+        print(engine.executor.buildstops(RakutenProducts,
+                                         outputfile='/tmp/stops.txt',
+                                         limit=100))
+        print(engine.executor.buildstops(RakutenProducts,
+                                         outputfile='/tmp/stops.txt',
+                                         limit=100,
+                                         freqs=True))
+
+    def test_indexer_merge(self):
+        engine = self.local_engine
+
+        print(engine.executor.merge(RakutenProducts, deleted=0))
 
     def test(self):
-        engine = self.engine_with_schema
+        engine = self.local_engine
 
         print(engine.get_session())
 
         print(engine.create_config())
 
         engine.save()
-
-        print(engine.executor.reindex(RakutenProducts))
-        print(engine.executor.buildstops(RakutenProducts,
-                                              outputfile='/tmp/stops.txt',
-                                              limit=100))
-        print(engine.executor.buildstops(RakutenProducts,
-                                              outputfile='/tmp/stops.txt',
-                                              limit=100,
-                                              freqs=True))
 
         engine.set_conf('sphinx.conf')
         self.assertEquals(engine.executor.get_conf(), 'sphinx.conf')
@@ -186,7 +208,6 @@ class Test(unittest.TestCase):
                                               outputfile='tmp/bar.txt',
                                               limit=1000,
                                               freqs=True))
-
         session = engine.get_session()
 
 
