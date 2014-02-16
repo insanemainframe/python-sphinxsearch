@@ -20,11 +20,35 @@ def index_to_str(*index):
 
 
 class CmdUnknownOptionException(Exception):
-    pass
+    def __init__(self, option):
+        msg = ', '.join(keys)
+        super(CmdUnknownOptionException, self).__init__(msg)
+
+
+class CmdOptionConflictException(Exception):
+    def __init__(self, option, keys):
+        super(CmdOptionConflictException, self).__init__()
+        self.option = option
+        self.conflicted = ', '.join(keys)
 
 
 class CmdRequiredOptionException(Exception):
     pass
+
+
+def check_options(kwargs):
+    if kwargs:
+        raise CmdUnknownOptionException(kwargs.keys())
+
+
+def requires_kwarg(name):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            if name not in kwargs:
+                raise CmdRequiredOptionException(name)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def cmd_decorator(func):
@@ -32,9 +56,12 @@ def cmd_decorator(func):
         try:
             cmd_splitted = func(*args, **kwargs)
         except CmdUnknownOptionException as e:
-            raise TypeError("%s got an unexpected keyword argument ''%s" % (func, e.message))
+            raise TypeError("%s are an invalid keyword arguments for this function" % e.message)
         except CmdRequiredOptionException as e:
             raise TypeError("you must provide '%s' argument" % e.message)
+        except CmdOptionConflictException as e:
+            option, conflicted = e.option, e.conflicted
+            raise TypeError('option %s conflictz with options; %s' % (option, conflicted))
         else:
             return ' '.join(cmd_splitted)
     return wrapper
@@ -52,12 +79,57 @@ def cmd_option(name, option, default):
     return decorator
 
 
+def cmd_named_option(name, option, default=None, apply=None, conflicts=None):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            option_value = kwargs.pop(name, default)
+            cmd_splitted = list(func(*args, **kwargs))
+            if option_value is not None:
+                # check conflicts
+                if conflicts:
+                    conf_keys = [k for k in conflicts if k in kwargs]
+                    if conf_keys:
+                        raise CmdOptionConflictException(name, conf_keys)
+
+                if callable(apply):
+                    option_value = apply(option_value)
+                cmd_splitted.append(option)
+                cmd_splitted.append(unicode(option_value))
+            return cmd_splitted
+        return wrapper
+    return decorator
+
+
+def cmd_loglevel_option(func):
+    def wrapper(*args, **kwargs):
+        level = int(kwargs.pop('logdebug', 0) or 0)
+
+        if not level:
+            logdebug_str = ''
+        elif 1 <= level <= 3:
+            level_str = (level - 1) * 'v'
+            logdebug_str = '--logdebug%s' % level_str
+        else:
+            raise TypeError('invalid logdebug level %s' % level)
+
+        cmd_splitted = list(func(*args, **kwargs))
+        if logdebug_str:
+            cmd_splitted.append(logdebug_str)
+        return cmd_splitted
+    return wrapper
+
+
 def indexer_cmd(func):
     func = cmd_option('dump', '--dump-rows', False)(func)
     func = cmd_option('sql', '--print-queries', False)(func)
     func = cmd_option('debug', '--verbose', False)(func)
     func = cmd_option('noprogress', '--noprogress', False)(func)
     func = cmd_option('quiet', '--quiet', False)(func)
+    func = cmd_decorator(func)
+    return func
+
+
+def server_cmd(func):
     func = cmd_decorator(func)
     return func
 
@@ -129,8 +201,8 @@ class Executor(object):
         cmd_splitted = [self.indexer]
 
         all = kwargs.pop('all', False)
-        if kwargs:
-            raise CmdUnknownOptionException(kwargs.popitem()[0])
+
+        check_options(kwargs)
 
         if all:
             cmd_splitted.append('--all')
@@ -162,8 +234,7 @@ class Executor(object):
         else:
             dst_range_str = ''
 
-        if kwargs:
-            raise CmdUnknownOptionException(kwargs.popitem()[0])
+        check_options(kwargs)
 
         cmd_splitted = [self.indexer, '--merge']
 
@@ -178,21 +249,18 @@ class Executor(object):
 
     @indexer_cmd
     @cmd_option('freqs', '--buildfreqs', False)
+    @requires_kwarg('outputfile')
+    @requires_kwarg('limit')
     def buildstops(self, *indexes, **kwargs):
         """
         >>> executor.buildstops(Index, 'main', limit=500, freqs=True, outputfile='/tmp/stops.txt')
         >>> executor.buildstops('main', 'delta', limit=5000, sql=True)
         >>> executor.buildstops(Main, Delta, limit=9000, outputfile='/tmp/stops.txt')
         """
-        outputfile = kwargs.pop('outputfile', None)
-        limit = kwargs.pop('limit', None)
+        outputfile = kwargs.pop('outputfile')
+        limit = kwargs.pop('limit')
 
-        if kwargs:
-            raise CmdUnknownOptionException(kwargs.popitem()[0])
-        if not limit:
-            raise CmdRequiredOptionException('outputfile')
-        if not outputfile:
-            raise CmdRequiredOptionException('limit')
+        check_options(kwargs)
 
         cmd_splitted = [self.indexer]
         cmd_splitted.extend(map(index_to_str, indexes))
@@ -202,3 +270,49 @@ class Executor(object):
         cmd_splitted.append(unicode(int(limit)))
         return cmd_splitted
 
+    @server_cmd
+    @cmd_option('pidfile', '--pidfile', False)
+    def status(self):
+        return [self.searchd, '--status']
+
+    @server_cmd
+    @cmd_option('block', '--stopwait', False)
+    @cmd_named_option('pidfile', '--pidfile')
+    def stop(self):
+        return [self.searchd, '--stop']
+
+    @server_cmd
+    @cmd_named_option('pidfile', '--pidfile')
+    @cmd_named_option('listen', '--listen', conflicts=('host', 'port'))
+    @cmd_named_option('port', '--port', conflicts=('listen',))
+    @cmd_named_option('host', '--host', conflicts=('listen',))
+    @cmd_named_option('index', '--index', apply=index_to_str)
+    @cmd_option('iostats', '--iostats', False)
+    @cmd_option('cpustats', '--cpustats', False)
+    @cmd_option('console', '--console', False)
+    @cmd_option('install', '--install', False)
+    @cmd_option('delete', '--delete', False)
+    @cmd_option('servicename', '--servicename', False)
+    @cmd_option('ntservice', '--ntservice', False)
+    @cmd_option('safetrace', '--safetrace', False)
+    @cmd_option('replay_flags', '--replay-flags', False)
+    @cmd_loglevel_option
+    def start(self, **kwargs):
+        return [self.searchd, '--start']
+
+    @server_cmd
+    def restart(self, *args, **kwargs):
+        pidfile = kwargs.pop('pidfile', None)
+        new_pidfile = kwargs.pop('new_pidfile', pidfile)
+
+        stop_kwargs = dict(block=True)
+        start_kwargs = kwargs
+
+        if pidfile:
+            stop_kwargs['pidfile'] = pidfile
+        if new_pidfile:
+            start_kwargs['pidfile'] = new_pidfile
+
+        stop_cmd = self.stop(**stop_kwargs)
+        start_cmd = self.start(*args, **start_kwargs)
+        return [stop_cmd, ';', start_cmd]

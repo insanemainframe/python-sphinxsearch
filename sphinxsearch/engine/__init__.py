@@ -120,7 +120,7 @@ class Engine(object):
         new_inst.extend_indexes(indexes)
         return new_inst
 
-    def session(self, **kwargs):
+    def get_session(self, **kwargs):
         return self.server.get_session(**kwargs)
 
 

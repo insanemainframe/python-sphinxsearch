@@ -118,34 +118,75 @@ class Test(unittest.TestCase):
         self.server = get_server()
         self.api = sphinxapi
         self.indexer = get_indexer()
-        self.engine = get_engine(self.api, self.server, self.indexer, set())
+
+    @property
+    def engine(self):
+        engine = get_engine(self.api, self.server, self.indexer, set())
+        conf_file_path = join(TMP_ROOT, 'sphinx.conf')
+        engine.set_conf(conf_file_path)
+        return engine
+
+    @property
+    def engine_with_schema(self):
+        engine = self.engine
+        engine.add_index(RakutenProducts)
+        engine.extend_indexes((AnyshopProducts, AbstractProductsIndex))
+
+        return engine
+
+    def test_server_cmd(self):
+        engine = self.engine
+        engine.set_conf('sphinx.conf')
+        engine.save()
+        print(engine.executor.status())
+
+        print(engine.executor.start())
+        for i in range(0, 4):
+            print(engine.executor.start(logdebug=i))
+        print(engine.executor.start(index=RakutenProducts))
+        print(engine.executor.start(index='main'))
+
+        print(engine.executor.stop())
+        print(engine.executor.stop(block=True))
+        print(engine.executor.stop(block=True, pidfile='/tmp/custom.pid'))
+
+        print(engine.executor.restart())
+        print(engine.executor.restart(pidfile='/tmp/custom.pid'))
+        print(engine.executor.restart(pidfile='/tmp/custom.pid',
+                                      new_pidfile='/tmp/custom_new.pid',
+                                      logdebug=i))
+
+        print(engine.executor.start(port=1234))
+        print(engine.executor.start(listen='localhost:4321:mysql41'))
+        print(engine.executor.start(listen='localhost:4321:mysql41', port=1234))
 
     def test(self):
-        print(self.engine.session())
+        engine = self.engine_with_schema
 
-        self.engine.add_index(RakutenProducts)
+        print(engine.get_session())
 
-        print(self.engine.create_config())
+        print(engine.create_config())
 
-        conf_file_path = join(TMP_ROOT, 'sphinx.conf')
+        engine.save()
 
-        self.engine.set_conf(conf_file_path)
-
-        self.engine.save()
-
-        print(self.engine.executor.reindex(RakutenProducts))
-        print(self.engine.executor.buildstops(RakutenProducts,
+        print(engine.executor.reindex(RakutenProducts))
+        print(engine.executor.buildstops(RakutenProducts,
                                               outputfile='/tmp/stops.txt',
                                               limit=100))
-        print(self.engine.executor.buildstops(RakutenProducts,
+        print(engine.executor.buildstops(RakutenProducts,
                                               outputfile='/tmp/stops.txt',
                                               limit=100,
                                               freqs=True))
-        self.engine.set_conf('sphinx.conf')
-        self.assertEquals(self.engine.executor.get_conf(), 'sphinx.conf')
-        print(self.engine.executor.buildstops(RakutenProducts,
+
+        engine.set_conf('sphinx.conf')
+        self.assertEquals(engine.executor.get_conf(), 'sphinx.conf')
+
+        print(engine.executor.buildstops(RakutenProducts,
                                               'arena_products',
                                               outputfile='tmp/bar.txt',
                                               limit=1000,
                                               freqs=True))
+
+        session = engine.get_session()
+
 
