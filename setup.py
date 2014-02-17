@@ -6,7 +6,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 requires = open(os.path.join(here, 'requirements.txt')).read().split()
-tests_require = []
+tests_require = ['six']
 
 setup(
     name='sphinxsearch',
