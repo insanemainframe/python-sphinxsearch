@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from six import string_types
+
 from os.path import join
 
 from ..query.filters import Range
@@ -12,7 +14,7 @@ from ..utils.cmdtools import (cmd_flag, cmd_decorator,
 def index_to_str(*index):
     if len(index) == 1:
         index = index[0]
-        if isinstance(index, basestring):
+        if isinstance(index, string_types):
             return unicode(index)
         else:
             return ' '.join(index.get_index_names())

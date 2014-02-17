@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+from six import string_types
+
 from .groupby import GroupByOperator
 from .filters import BaseFilterOperator, Any
 from .orderby import AbtractSortMode, Attr
@@ -20,7 +24,7 @@ class QueryBackend(object):
 class Query(object):
 
     def __init__(self, index):
-        if isinstance(index, basestring):
+        if isinstance(index, string_types):
             indexes_str = unicode(index)
         else:
             self.index = index
