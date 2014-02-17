@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from ..session import SessionFactory
+from ..exceptions import ConfigError
 from .base import OptionableMeta, OptionableBase
 
 
@@ -53,6 +54,8 @@ class SearchServer(OptionableBase):
 
     def __init__(self, host=None, port=None, listen=None):
         super(SearchServer, self).__init__()
+        self._api = None
+
         if listen and not (host or port):
             self.listen_str = unicode(listen)
         elif host and port:
@@ -63,6 +66,20 @@ class SearchServer(OptionableBase):
             self.session_maker.set_server(self)
         else:
             raise ValueError('You nust provide host and port or listen')
+
+    @property
+    def api(self):
+        if self._api is None:
+            raise ConfigError("SearchServer instance doesn't provide api")
+        return self._api
+
+    @api.setter
+    def api(self, value):
+        self._api = value
+
+    @api.deleter
+    def api(self, value):
+        self._api = None
 
     def set_api(self, api):
         self.api = api

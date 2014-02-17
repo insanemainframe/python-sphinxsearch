@@ -8,4 +8,4 @@ class Test(unittest.TestCase):
     def test(self):
         from .config1 import RakutenProducts
 
-        print RakutenProducts.get_conf_blocks(None)
+        print RakutenProducts

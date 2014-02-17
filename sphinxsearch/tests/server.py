@@ -7,6 +7,7 @@ from sphinxsearch.engine.server import SearchServer
 from sphinxsearch.engine.indexer import Indexer
 from sphinxsearch.engine import Engine
 from sphinxsearch.session import Session
+from sphinxsearch.exceptions import ConfigError
 
 
 class Test(unittest.TestCase):
@@ -26,7 +27,9 @@ class Test(unittest.TestCase):
 
     def test_server(self):
         print self.server.get_options()
-        self.assertIsInstance(self.server.get_session(self.api), Session)
+
+        with self.assertRaises(ConfigError):
+            self.assertIsInstance(self.server.get_session(), Session)
 
     def test_indexer(self):
         print self.indexer.get_options()
@@ -39,7 +42,7 @@ class Test(unittest.TestCase):
 
         engine.server = self.server
 
-        self.assertIsInstance(engine.session(), Session)
+        self.assertIsInstance(engine.get_session(), Session)
 
 
 

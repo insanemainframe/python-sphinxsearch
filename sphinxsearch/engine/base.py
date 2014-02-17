@@ -13,7 +13,7 @@ class ConfAttrProperty(object):
     def __set__(self, instance, value):
         self.value = value
 
-    def __del__(self, instance):
+    def __delete__(self, instance):
         self.value = None
 
     def get_value(self):
