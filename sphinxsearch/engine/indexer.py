@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from six import with_metaclass
+
 from .base import OptionableMeta, OptionableBase
 
 
@@ -15,6 +17,5 @@ class _IndexerMeta(OptionableMeta):
                'lemmatizer_cache']
 
 
-class Indexer(OptionableBase):
+class Indexer(with_metaclass(_IndexerMeta, OptionableBase)):
     option_block_name = 'indexer'
-    __metaclass__ = _IndexerMeta

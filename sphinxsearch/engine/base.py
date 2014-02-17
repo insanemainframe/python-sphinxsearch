@@ -40,7 +40,7 @@ class OptionableBase(object):
     def get_options_dict(self):
         opt_dict = {}
 
-        meta_options_names = self.__class__.__metaclass__.OPTIONS
+        meta_options_names = self.__class__.OPTIONS
         for opt_name in meta_options_names:
             opt_value = getattr(self, opt_name)
             if opt_value is not None:

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 
+from six import with_metaclass
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from .const import RT_SOURCE_TYPE, SQL_SOURCE_TYPE, XML_SOURCE_TYPE
@@ -10,8 +12,7 @@ __all__ = ['RT', 'ODBC', 'XML', 'MysqlCertificate',
            'MysqlSource', 'MssqlSource', 'PgsqlSource']
 
 
-class AbstractIndexType(object):
-    __metaclass__ = ABCMeta
+class AbstractIndexType(with_metaclass(ABCMeta, object)):
 
     @abstractmethod  # pragma: no cover
     def get_option_dicts(index, attrs_conf):

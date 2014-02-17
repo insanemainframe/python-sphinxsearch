@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
+from six import with_metaclass
+
 from abc import ABCMeta, abstractproperty
 
 from .expr import BaseExpr
 
 
-class AbtractSortMode(object):
-    __metaclass__ = ABCMeta
+class AbtractSortMode(with_metaclass(ABCMeta, object)):
 
     @abstractproperty  # pragma: no cover
     def api_const():

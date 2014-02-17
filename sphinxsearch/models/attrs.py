@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from six import with_metaclass
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from .const import (SQL_SOURCE_TYPE, XML_SOURCE_TYPE, RT_SOURCE_TYPE,
                     RANGE_QUERY_START, RANGE_QUERY_END)
 
 
-class AbstractAttr(object):
-    __metaclass__ = ABCMeta
-
+class AbstractAttr(with_metaclass(ABCMeta, object)):
     @abstractmethod  # pragma: no cover
     def get_option(self, attr_name, source_type):
         """"""

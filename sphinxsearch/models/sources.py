@@ -1,17 +1,25 @@
 # -*- coding: utf-8 -*-
 from abc import ABCMeta
 
+from six import with_metaclass
+
 from .attrs import AbstractAttr
 from .types import AbstractIndexType
 from ..utils import is_abstract, set_abstract
+
+
+class IndexBase(object):
+    __abstract__ = True
 
 
 class IndexMeta(ABCMeta):
     def __new__(cls, cls_name, cls_parents, cls_dict):
         src_cls = ABCMeta.__new__(cls, cls_name, cls_parents, cls_dict)
 
-        is_base = cls_dict.get('__metaclass__') == cls
-        is_abc = is_base or cls_dict.pop('__abstract__', False)
+        if cls_name.split('.')[-1] == 'NewBase':
+            return src_cls
+
+        is_abc = cls_dict.pop('__abstract__', False)
 
         set_abstract(src_cls, is_abc)
 
@@ -42,15 +50,15 @@ class IndexMeta(ABCMeta):
 
     @staticmethod
     def validate(src_cls):
-        assert hasattr(src_cls, '__source__')
-        assert isinstance(src_cls.__source__, AbstractIndexType)
+        assert hasattr(src_cls, '__source__'), src_cls
+        assert isinstance(src_cls.__source__, AbstractIndexType), src_cls.__source__
+        pass
 
 
-class Index(object):
-    __metaclass__ = IndexMeta
+class Index(with_metaclass(IndexMeta, IndexBase)):
     __delta__ = False
+    __abstract__ = True
 
-    #
     @classmethod
     def get_option_dicts(cls, engine):
         if is_abstract(cls):

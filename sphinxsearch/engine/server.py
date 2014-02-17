@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from six import with_metaclass
+
 from ..session import SessionFactory
 from ..exceptions import ConfigError
 from .base import OptionableMeta, OptionableBase
@@ -48,8 +50,7 @@ class _SearchServerMeta(OptionableMeta):
                'prefork_rotation_throttle']
 
 
-class SearchServer(OptionableBase):
-    __metaclass__ = _SearchServerMeta
+class SearchServer(with_metaclass(_SearchServerMeta, OptionableBase)):
     option_block_name = 'server'
 
     def __init__(self, host=None, port=None, listen=None):
