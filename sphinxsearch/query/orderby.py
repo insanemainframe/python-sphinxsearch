@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from abc import ABCMeta, abstractproperty
 
 from .expr import BaseExpr
@@ -80,7 +81,7 @@ class MultiSort(AbtractSortMode):
     api_const = 'SPH_SORT_EXTENDED'
 
     def __init__(self, *modes):
-        assert len(modes) <= 5, u'you can set max 5 attributes'
+        assert len(modes) <= 5, 'you can set max 5 attributes'
 
         mode_str_list = []
 

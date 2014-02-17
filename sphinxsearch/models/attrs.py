@@ -58,7 +58,7 @@ class WordCount(AbstractUnitAttr):
 
 class MVA(AbstractAttr):
     def __init__(self, attr_type, query=None):
-        assert issubclass(attr_type, AbstractUnitAttr), u'attr_type mut be AbstractUnitAttr subtype'
+        assert issubclass(attr_type, AbstractUnitAttr), 'attr_type mut be AbstractUnitAttr subtype'
         self.attr_type_str = attr_type.type_str
         self.attr_type = attr_type
         self._query = query
