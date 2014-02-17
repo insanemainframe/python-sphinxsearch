@@ -1,1 +1,2 @@
+six(==1.5.2)
 -e git+https://github.com/nazyacom/sphinxapi.git@06dc54998534b982b64c31a6f563787156096822#egg=sphinxapi
