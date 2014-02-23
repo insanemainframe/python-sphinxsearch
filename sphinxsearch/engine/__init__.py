@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from ..utils import is_abstract
 from .server import SearchServer
 from .indexer import Indexer
-from .executor import Executor
+from .commands import CommandBuilder
 from ..utils.const import CONFIG_INDENT
 
 
@@ -15,7 +15,7 @@ class Engine(object):
         self._indexer = None
         self._indexes = set()
         self.conf_file = None
-        self.executor = Executor()
+        self.commands = CommandBuilder()
 
     @property
     def api(self):
@@ -49,6 +49,10 @@ class Engine(object):
     def indexes(self):
         return iter(self._indexes)
 
+    @property
+    def binder(self):
+        pass
+
     def add_index(self, index):
         self._indexes.add(index)
 
@@ -57,7 +61,7 @@ class Engine(object):
 
     def set_conf(self, conf_file):
         self.conf_file = conf_file
-        self.executor.set_conf(conf_file)
+        self.commands.set_conf(conf_file)
 
     def get_conf(self):
         return self.conf_file

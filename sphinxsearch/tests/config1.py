@@ -144,44 +144,44 @@ class Test(unittest.TestCase):
     def test_server_start(self):
         engine = self.local_engine
 
-        print(engine.executor.status())
+        print(engine.commands.status())
 
-        print(engine.executor.start())
+        print(engine.commands.start())
         for i in range(0, 4):
-            print(engine.executor.start(logdebug=i))
-        print(engine.executor.start(index=RakutenProducts))
-        print(engine.executor.start(index='main'))
+            print(engine.commands.start(logdebug=i))
+        print(engine.commands.start(index=RakutenProducts))
+        print(engine.commands.start(index='main'))
 
-        print(engine.executor.start(port=1234))
-        print(engine.executor.start(listen='localhost:4321:mysql41'))
+        print(engine.commands.start(port=1234))
+        print(engine.commands.start(listen='localhost:4321:mysql41'))
 
-        get_invalid_start = lambda: engine.executor.start(listen='localhost:4321:mysql41', port=1234)
+        get_invalid_start = lambda: engine.commands.start(listen='localhost:4321:mysql41', port=1234)
         self.assertRaises(TypeError, get_invalid_start)
 
     def test_server_stop(self):
         engine = self.local_engine
-        print(engine.executor.stop())
-        print(engine.executor.stop(block=True))
-        print(engine.executor.stop(block=True, pidfile='/tmp/custom.pid'))
+        print(engine.commands.stop())
+        print(engine.commands.stop(block=True))
+        print(engine.commands.stop(block=True, pidfile='/tmp/custom.pid'))
 
     def test_server_restart(self):
         engine = self.local_engine
-        print(engine.executor.restart())
-        print(engine.executor.restart(pidfile='/tmp/custom.pid'))
-        print(engine.executor.restart(pidfile='/tmp/custom.pid',
+        print(engine.commands.restart())
+        print(engine.commands.restart(pidfile='/tmp/custom.pid'))
+        print(engine.commands.restart(pidfile='/tmp/custom.pid',
                                       new_pidfile='/tmp/custom_new.pid',
                                       logdebug=3))
 
     def test_indexer(self):
         engine = self.local_engine
 
-        print(engine.executor.reindex(RakutenProducts))
-        print(engine.executor.reindex(all=True, sighup_each=True))
+        print(engine.commands.reindex(RakutenProducts))
+        print(engine.commands.reindex(all=True, sighup_each=True))
 
-        print(engine.executor.buildstops(RakutenProducts,
+        print(engine.commands.buildstops(RakutenProducts,
                                          outputfile='/tmp/stops.txt',
                                          limit=100))
-        print(engine.executor.buildstops(RakutenProducts,
+        print(engine.commands.buildstops(RakutenProducts,
                                          outputfile='/tmp/stops.txt',
                                          limit=100,
                                          freqs=True))
@@ -189,7 +189,7 @@ class Test(unittest.TestCase):
     def test_indexer_merge(self):
         engine = self.local_engine
 
-        print(engine.executor.merge(RakutenProducts, deleted=0))
+        print(engine.commands.merge(RakutenProducts, deleted=0))
 
     def test(self):
         engine = self.local_engine
@@ -201,9 +201,9 @@ class Test(unittest.TestCase):
         engine.save()
 
         engine.set_conf('sphinx.conf')
-        self.assertEquals(engine.executor.get_conf(), 'sphinx.conf')
+        self.assertEquals(engine.commands.get_conf(), 'sphinx.conf')
 
-        print(engine.executor.buildstops(RakutenProducts,
+        print(engine.commands.buildstops(RakutenProducts,
                                               'arena_products',
                                               outputfile='tmp/bar.txt',
                                               limit=1000,
