@@ -10,9 +10,17 @@ from .const import (SQL_SOURCE_TYPE, XML_SOURCE_TYPE, RT_SOURCE_TYPE,
 
 
 class AbstractAttr(with_metaclass(ABCMeta, object)):
+    def __init__(self):
+        self.binded = False
+        self.name = None
+
     @abstractmethod  # pragma: no cover
     def get_option(self, attr_name, source_type):
         """"""
+
+    def bind(self, model, name):
+        self.binded = True
+        self.name = name
 
 
 class AbstractUnitAttr(AbstractAttr):
@@ -20,8 +28,12 @@ class AbstractUnitAttr(AbstractAttr):
     def type_str():
         """"""
 
-    def get_option(self, attr_name, source_type):
-        return '%s_attr_%s' % (source_type, self.type_str), attr_name
+    def get_type(self):
+        source_type = self.model.source_type
+        return '%s_attr_%s' % (source_type, self.type_str)
+
+    def get_option(self):
+        return self.get_type(), self.name
 
 
 class Int(AbstractUnitAttr):

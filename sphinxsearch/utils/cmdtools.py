@@ -19,11 +19,17 @@ class RequiredOptionException(Exception):
     pass
 
 
-def requires_kwarg(name):
+def requires_kwarg(name, **kwargs):
+    is_default = 'default' in kwargs
+    default = kwargs.get('default')
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             if name not in kwargs:
-                raise RequiredOptionException(name)
+                if is_default:
+                    kwargs[name] = default
+                else:
+                    raise RequiredOptionException(name)
             return func(*args, **kwargs)
         return wrapper
     return decorator
